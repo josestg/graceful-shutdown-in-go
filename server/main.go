@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"io"
 	"log/slog"
 	"math/rand"
@@ -39,11 +40,14 @@ func main() {
 	// create http server.
 	srv := &http.Server{Addr: ":8080", Handler: mux}
 
+	serverError := make(chan error, 1)
 	go func() {
 		log.Info("server started", "addr", srv.Addr)
 		if err := srv.ListenAndServe(); err != nil {
-			log.Error("could not start server", "error", err)
-			os.Exit(1)
+			// only capture error if it's not server closed error.
+			if !errors.Is(err, http.ErrServerClosed) {
+				serverError <- err
+			}
 		}
 	}()
 
@@ -54,6 +58,9 @@ func main() {
 
 	log.Info("listen for shutdown request", "watched_signals", watchedSignals)
 	select {
+	case err := <-serverError:
+		log.Error("listen and serve failed", "error", err)
+
 	case sig := <-shutdownListener:
 		log.Info("received shutdown request", "signal", sig)
 	}
