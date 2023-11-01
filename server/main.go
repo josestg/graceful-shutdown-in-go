@@ -6,6 +6,8 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 )
 
@@ -40,5 +42,16 @@ func main() {
 	if err := srv.ListenAndServe(); err != nil {
 		log.Error("could not start server", "error", err)
 		os.Exit(1)
+	}
+
+	watchedSignals := []os.Signal{syscall.SIGINT, syscall.SIGTERM}
+
+	shutdownListener := make(chan os.Signal, 1)
+	signal.Notify(shutdownListener, watchedSignals...)
+
+	log.Info("listen for shutdown request", "watched_signals", watchedSignals)
+	select {
+	case sig := <-shutdownListener:
+		log.Info("received shutdown request", "signal", sig)
 	}
 }
