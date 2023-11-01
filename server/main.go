@@ -38,11 +38,14 @@ func main() {
 
 	// create http server.
 	srv := &http.Server{Addr: ":8080", Handler: mux}
-	log.Info("server started", "addr", srv.Addr)
-	if err := srv.ListenAndServe(); err != nil {
-		log.Error("could not start server", "error", err)
-		os.Exit(1)
-	}
+
+	go func() {
+		log.Info("server started", "addr", srv.Addr)
+		if err := srv.ListenAndServe(); err != nil {
+			log.Error("could not start server", "error", err)
+			os.Exit(1)
+		}
+	}()
 
 	watchedSignals := []os.Signal{syscall.SIGINT, syscall.SIGTERM}
 
