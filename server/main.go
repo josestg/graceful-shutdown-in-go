@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"flag"
 	"io"
 	"log/slog"
 	"math/rand"
@@ -32,6 +33,10 @@ func slowHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	var waitTolerance time.Duration
+	flag.DurationVar(&waitTolerance, "wait", 5*time.Second, "wait tolerance for graceful shutdown")
+	flag.Parse()
+
 	log := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{}))
 	slog.SetDefault(log)
 
@@ -66,10 +71,14 @@ func main() {
 		log.Info("received shutdown request", "signal", sig)
 
 		// shutdown process.
-		log.Info("shutting down server")
+		log.Info("shutting down server", "wait_tolerance", waitTolerance)
 		defer log.Info("server shutdown gracefully")
 
-		if err := srv.Shutdown(context.TODO()); err != nil {
+		// we don't want to wait forever for connections to close.
+		ctx, cancel := context.WithTimeout(context.Background(), waitTolerance)
+		defer cancel()
+
+		if err := srv.Shutdown(ctx); err != nil {
 			log.Error("server shutdown failed", "error", err)
 		}
 	}
