@@ -80,6 +80,14 @@ func main() {
 
 		if err := srv.Shutdown(ctx); err != nil {
 			log.Error("server shutdown failed", "error", err)
+			if errors.Is(err, context.DeadlineExceeded) {
+				log.Info("executing forced shutdown")
+				if err := srv.Close(); err != nil {
+					log.Error("server close failed", "error", err)
+				} else {
+					log.Info("forced shutdown completed")
+				}
+			}
 		}
 	}
 }
