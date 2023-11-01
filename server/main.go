@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"io"
 	"log/slog"
@@ -63,5 +64,13 @@ func main() {
 
 	case sig := <-shutdownListener:
 		log.Info("received shutdown request", "signal", sig)
+
+		// shutdown process.
+		log.Info("shutting down server")
+		defer log.Info("server shutdown gracefully")
+
+		if err := srv.Shutdown(context.TODO()); err != nil {
+			log.Error("server shutdown failed", "error", err)
+		}
 	}
 }
